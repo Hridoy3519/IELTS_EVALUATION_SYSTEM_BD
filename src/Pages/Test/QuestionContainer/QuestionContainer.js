@@ -1,12 +1,15 @@
-import { async } from '@firebase/util';
-import React, { useEffect } from 'react';
-import { useState } from 'react';
-import { Container } from 'react-bootstrap';
-import useAuth from '../../../Hooks/useAuth';
+import {async} from "@firebase/util";
+import React, {useEffect} from "react";
+import {useState} from "react";
+import {Container} from "react-bootstrap";
+import useAuth from "../../../Hooks/useAuth";
+import Swal from "sweetalert2";
+import {useNavigate} from "react-router-dom";
+import "./style.css";
 
 const QuestionContainer = (props) => {
-    const { question, showFeedback, onPressSubmit } = props
-    const { user } = useAuth()
+    const {question, showFeedback, onPressSubmit} = props;
+    const {user} = useAuth();
     const [userAnswer, setUserAnswer] = useState("");
     const [band_score, setBandScore] = useState("");
     const [feedback, setFeedback] = useState("");
@@ -14,6 +17,7 @@ const QuestionContainer = (props) => {
     const handleAnswerChange = (event) => {
         setUserAnswer(event.target.value);
     };
+    const navigate = useNavigate();
 
     const [time, setTime] = useState(2400); // 40 minutes in seconds
 
@@ -28,8 +32,8 @@ const QuestionContainer = (props) => {
     const seconds = time % 60;
 
     const handleSubmit = (e) => {
-        console.log("IIII")
-        const data = { question, answer: userAnswer }
+        console.log("IIII");
+        const data = {question, answer: userAnswer};
         fetch("http://localhost:5000/test-band-score", {
             method: "POST",
             headers: {
@@ -39,18 +43,40 @@ const QuestionContainer = (props) => {
         })
             .then((res) => res.json())
             .then((data) => {
-                console.log(data)
+                console.log(data);
                 if (data.band_score.length > 0) {
-                    console.log("Band : ", data.band_score)
-                    setBandScore(data.band_score);
+                    const bScore = parseInt(data.band_score);
+                    console.log("Band : ", bScore);
+                    setBandScore(bScore);
                     setFeedback(data.feedback);
-                    const testResult = { user: user.email, question, bandScore: data.band_score, feedback: data.feedback, demoAnswer: "" }
-                    onPressSubmit(true)
-                    storeUserTestResult(testResult)
+                    const testResult = {
+                        user: user.email,
+                        question,
+                        bandScore: bScore,
+                        feedback: data.feedback,
+                        demoAnswer: "",
+                    };
+                    onPressSubmit(true);
+                    storeUserTestResult(testResult);
+                    Swal.fire({
+                        icon: bScore > 5 ? "success" : "error",
+                        title: `Band Score - ${bScore}`,
+                        text: `Feedback - ${data.feedback}`,
+                    }).then((x) => {
+                        if (x.isConfirmed) {
+                            navigate("/");
+                        }
+                    });
                 }
+            })
+            .catch((e) => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "Something went wrong!",
+                });
             });
     };
-
 
     const storeUserTestResult = (testResult) => {
         fetch("http://localhost:5000/addNewTest", {
@@ -62,24 +88,24 @@ const QuestionContainer = (props) => {
         })
             .then((res) => res.json())
             .then((data) => console.log(data));
-    }
+    };
 
     const convertToBase64 = (file) => {
         return new Promise((resolve, reject) => {
-            const fileReader = new FileReader()
+            const fileReader = new FileReader();
             fileReader.readAsDataURL(file);
 
             fileReader.onload = () => {
-                resolve(fileReader.result)
-            }
+                resolve(fileReader.result);
+            };
 
             fileReader.onerror = (error) => {
-                reject(error)
-            }
-        })
-    }
+                reject(error);
+            };
+        });
+    };
     const uploadImage = async (e) => {
-        const file = e.target.files[0]
+        const file = e.target.files[0];
 
         const formData = new FormData();
         formData.append("file", file);
@@ -88,12 +114,12 @@ const QuestionContainer = (props) => {
             method: "POST",
             body: formData,
         })
-            .then(response => response.json())
-            .then(data => setUserAnswer(data.PredictionByModel))
-            .catch(error => console.error(error));
+            .then((response) => response.json())
+            .then((data) => setUserAnswer(data.PredictionByModel))
+            .catch((error) => console.error(error));
         // const base64 = await convertToBase64(file)
         // setUploadedImage(base64);
-    }
+    };
     return (
         <div>
             <Container
@@ -102,17 +128,26 @@ const QuestionContainer = (props) => {
                     justifyContent: "center",
                     alignItems: "center",
                     height: "100vh",
-                }}>
+                }}
+            >
                 <div
                     style={{
                         boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.2)",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "start",
+                        position: "relative",
                     }}
                     className="p-5"
                 >
-                    <div style={{ float: "left", marginRight: "20px" }}>
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: "0%",
+                            left: "50%",
+                            transform: "translateY(-65%) translateX(-50%)",
+                        }}
+                    >
                         <div
                             style={{
                                 backgroundColor: "#FF4D4F", // shade of red
@@ -122,20 +157,26 @@ const QuestionContainer = (props) => {
                                 display: "inline-block",
                             }}
                         >
-                            <span style={{ fontSize: "32px", fontWeight: "bold" }}>
+                            <span
+                                style={{fontSize: "32px", fontWeight: "bold"}}
+                            >
                                 {minutes < 10 ? "0" + minutes : minutes}
                             </span>
-                            <span style={{ fontSize: "20px" }}>:</span>
-                            <span style={{ fontSize: "32px", fontWeight: "bold" }}>
+                            <span style={{fontSize: "20px"}}>:</span>
+                            <span
+                                style={{fontSize: "32px", fontWeight: "bold"}}
+                            >
                                 {seconds < 10 ? "0" + seconds : seconds}
                             </span>
                         </div>
                     </div>
                     <div className="row d-flex align-items-center">
-                        <div className="col-md-5" style={{ padding: "30px" }}>
+                        <div className="col-md-5" style={{padding: "30px"}}>
                             <div>
-                                <h2 style={{ color: "#FA811B" }}>IELTS Writing Task Question</h2>
-                                <p style={{ color: "#707070", fontSize: "18px" }}>
+                                <h2 style={{color: "#FA811B"}}>
+                                    IELTS Writing Task Question
+                                </h2>
+                                <p style={{color: "#707070", fontSize: "18px"}}>
                                     {question}
                                 </p>
                             </div>
@@ -146,7 +187,8 @@ const QuestionContainer = (props) => {
                                     backgroundColor: "#f2f2f2",
                                     padding: "20px",
                                     borderRadius: "10px",
-                                    boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.2)",
+                                    boxShadow:
+                                        "0px 2px 10px rgba(0, 0, 0, 0.2)",
                                 }}
                             >
                                 <h2>Your Answer</h2>
@@ -162,11 +204,18 @@ const QuestionContainer = (props) => {
                                         borderColor: "#ccc",
                                     }}
                                 />
-                                <div style={{ marginTop: "10px", textAlign: "right" }}>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        marginTop: "10px",
+                                        textAlign: "right",
+                                    }}
+                                >
                                     <button
                                         type="button"
                                         className="btn btn-theme"
-                                        style={{ marginRight: "10px" }}
+                                        style={{marginRight: "10px"}}
                                         onClick={(e) => {
                                             e.preventDefault();
                                             handleSubmit();
@@ -174,12 +223,23 @@ const QuestionContainer = (props) => {
                                     >
                                         Submit
                                     </button>
-                                    <button type="button" className="btn btn-theme">
+                                    <button
+                                        type="button"
+                                        className="btn btn-theme"
+                                    >
                                         Clear
                                     </button>
-                                    <input type="file" onChange={(e) => {
-                                        uploadImage(e)
-                                    }}></input>
+                                    <input
+                                        style={{
+                                            marginLeft: "10px",
+                                            width: "250px",
+                                        }}
+                                        className="btn btn-theme"
+                                        type="file"
+                                        onChange={(e) => {
+                                            uploadImage(e);
+                                        }}
+                                    ></input>
                                 </div>
                             </div>
                         </div>
@@ -191,23 +251,27 @@ const QuestionContainer = (props) => {
             </Container>
 
             {
-                showFeedback ?
+                // showFeedback ?
 
-                    props?.testDetails ? <Container className='my-2'>
+                props?.testDetails ? (
+                    <Container className="my-2">
                         <div>
                             <h1>Band Score : {props?.testDetails.bandScore}</h1>
                             <p>Feedback : {props?.testDetails.feedback}</p>
                             <p>Demo Answer : </p>
                         </div>
-                    </Container> : <Container className='my-2'>
+                    </Container>
+                ) : (
+                    <Container className="my-2">
                         <div>
                             <h1>Band Score : {band_score}</h1>
                             <p>Feedback : {feedback}</p>
                             <p>Demo Answer : </p>
                         </div>
-                    </Container> : ""
+                    </Container>
+                )
+                // </Container> : ""
             }
-
         </div>
     );
 };

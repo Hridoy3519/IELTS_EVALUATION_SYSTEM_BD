@@ -1,0 +1,15 @@
+input[type="file"] {
+    /* color: transparent; */
+}
+
+input::file-selector-button {
+    font-weight: bold;
+    color: white;
+    padding: 0;
+    border: none;
+    margin-left: -10px;
+    padding-right: 5px;
+    border-right: 1px solid white;
+    border-radius: 3px;
+    background-color: transparent;
+}
